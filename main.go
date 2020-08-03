@@ -2,42 +2,43 @@ package main
 
 import (
 	"fmt"
+	"os"
+	"os/exec"
+	"strings"
+
 	git "github.com/go-git/go-git/v5"
 	"github.com/go-git/go-git/v5/plumbing"
 	"github.com/manifoldco/promptui"
-	"strings"
-	"os/exec"
-	"os"
 )
 
 func main() {
 	gitDirectory, err := os.Getwd()
 	if err != nil {
-		panic(err)
+		fmt.Println("Unable to get current working directory")
+		os.Exit(1)
 	}
 
 	r, err := git.PlainOpen(gitDirectory)
-
 	if err != nil {
-		fmt.Println("open error!")
-		panic(err)
+		fmt.Println("Unable to open repo. Git directory is possibly invalid.")
+		os.Exit(1)
 	}
 
 	branchesIter, err := r.Branches()
 	defer branchesIter.Close()
 	if err != nil {
-		fmt.Println("branches error!")
-		panic(err)
+		fmt.Println("Unable to fetch branches for this project.")
+		os.Exit(1)
 	}
 
 	branches := []string{}
-	err = branchesIter.ForEach(func (branch *plumbing.Reference) error {
+	err = branchesIter.ForEach(func(branch *plumbing.Reference) error {
 		branches = append(branches, (*branch).Name().String()[11:])
 		return nil
 	})
-
 	if err != nil {
-		panic(err)
+		fmt.Println("Unable to compile list of branches for this project.")
+		os.Exit(1)
 	}
 
 	searcher := func(input string, index int) bool {
@@ -50,23 +51,22 @@ func main() {
 		Active:   "{{ . | cyan }}",
 		Inactive: "{{ .Name | cyan }}",
 		Selected: "{{ . | red | cyan }}",
-		Details: "{{ . }}",
+		Details:  "{{ . }}",
 	}
 
 	prompt := promptui.Select{
-		Label: "Branches",
-		Items: branches,
-		Size: 10,
-		Searcher: searcher,
+		Label:        "Branches",
+		Items:        branches,
+		Size:         10,
+		Searcher:     searcher,
 		HideSelected: true,
-		Templates: templates,
+		Templates:    templates,
 	}
 
 	_, branch, err := prompt.Run()
-
 	if err != nil {
-		fmt.Printf("Prompt failed %v\n", err)
-		return
+		fmt.Println("Unable to create prompt.")
+		os.Exit(1)
 	}
 
 	// go-git's checkout functionality doesn't work properly
@@ -74,6 +74,7 @@ func main() {
 	cmd.Dir = gitDirectory
 	err = cmd.Run()
 	if err != nil {
-		panic(err)
+		fmt.Println("Unable to checkout selected branch.")
+		os.Exit(1)
 	}
 }
