@@ -18,7 +18,9 @@ func main() {
 		os.Exit(1)
 	}
 
-	r, err := git.PlainOpen(gitDirectory)
+	r, err := git.PlainOpenWithOptions(gitDirectory, &git.PlainOpenOptions{
+		DetectDotGit: true,
+	})
 	if err != nil {
 		fmt.Println("Unable to open repo. Git directory is possibly invalid.")
 		os.Exit(1)
